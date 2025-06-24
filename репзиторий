@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Химический Поиск - Игра на знание элементов</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #4b8bff;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            margin: 0;
+        }
+        .game-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        .element-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .element {
+            background-color: #e6f2ff;
+            border: 2px solid #4b8bff;
+            border-radius: 5px;
+            padding: 10px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .element:hover {
+            background-color: #cce0ff;
+        }
+        .element.found {
+            background-color: #a3d8a3;
+            border-color: #2e8b57;
+        }
+        .element.wrong {
+            background-color: #ffb3b3;
+            border-color: #ff4d4d;
+        }
+        .current-target {
+            font-size: 1.5em;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fffacd;
+            border-radius: 5px;
+        }
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4b8bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #3a7aee;
+        }
+        .hint {
+            font-style: italic;
+            color: #666;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .periodic-table {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .element-details {
+            display: none;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .element-details h3 {
+            margin-top: 0;
+            color: #4b8bff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Химический Поиск</h1>
+        <p>Найдите все элементы периодической таблицы по их свойствам!</p>
+    </header>
+
+    <div class="game-container">
+        <div class="game-info">
+            <div>Очки: <span id="score">0</span></div>
+            <div>Осталось: <span id="remaining">118</span></div>
+            <div>Время: <span id="time">00:00</span></div>
+        </div>
+
+        <div class="current-target" id="current-target">
+            Нажмите "Начать игру", чтобы начать!
+        </div>
+
+        <div class="hint" id="hint">
+            Подсказка появится здесь...
+        </div>
+
+        <div class="element-grid" id="element-grid">
+            <!-- Элементы будут добавлены через JavaScript -->
+        </div>
+
+        <div class="controls">
+            <button id="start-btn">Начать игру</button>
+            <button id="hint-btn" disabled>Получить подсказку</button>
+            <button id="reset-btn" disabled>Сбросить игру</button>
+        </div>
+
+        <div class="element-details" id="element-details">
+            <h3 id="detail-name">Название элемента</h3>
+            <p><strong>Символ:</strong> <span id="detail-symbol"></span></p>
+            <p><strong>Атомный номер:</strong> <span id="detail-number"></span></p>
+            <p><strong>Атомная масса:</strong> <span id="detail-mass"></span></p>
+            <p><strong>Категория:</strong> <span id="detail-category"></span></p>
+            <p><strong>Описание:</strong> <span id="detail-description"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Данные об элементах
+        const elements = [
+            { number: 1, symbol: "H", name: "Водород", mass: 1.008, category: "Неметалл", description: "Самый легкий и распространенный элемент во Вселенной." },
+            { number: 2, symbol: "He", name: "Гелий", mass: 4.0026, category: "Инертный газ", description: "Второй по легкости элемент, используется в воздушных шарах." },
+            { number: 3, symbol: "Li", name: "Литий", mass: 6.94, category: "Щелочной металл", description: "Самый легкий металл, используется в батареях." },
+            { number: 4, symbol: "Be", name: "Бериллий", mass: 9.0122, category: "Щелочноземельный металл", description: "Легкий, но очень твердый металл." },
+            { number: 5, symbol: "B", name: "Бор", mass: 10.81, category: "Металлоид", description: "Используется в жаропрочных материалах и стекловолокне." },
+            { number: 6, symbol: "C", name: "Углерод", mass: 12.011, category: "Неметалл", description: "Основа органической химии и жизни на Земле." },
+            { number: 7, symbol: "N", name: "Азот", mass: 14.007, category: "Неметалл", description: "Составляет 78% атмосферы Земли." },
+            { number: 8, symbol: "O", name: "Кислород", mass: 15.999, category: "Неметалл", description: "Необходим для дыхания и горения." },
+            { number: 9, symbol: "F", name: "Фтор", mass: 18.998, category: "Галоген", description: "Самый реакционноспособный элемент." },
+            { number: 10, symbol: "Ne", name: "Неон", mass: 20.180, category: "Инертный газ", description: "Используется в неоновых лампах." },
+            // Можно добавить больше элементов...
+        ];
+
+        // Переменные игры
+        let score = 0;
+        let remainingElements = elements.length;
+        let time = 0;
+        let timer;
+        let currentTarget = null;
+        let usedElements = [];
+        let hintCount = 0;
+
+        // DOM элементы
+        const elementGrid = document.getElementById('element-grid');
+        const currentTargetEl = document.getElementById('current-target');
+        const scoreEl = document.getElementById('score');
+        const remainingEl = document.getElementById('remaining');
+        const timeEl = document.getElementById('time');
+        const hintEl = document.getElementById('hint');
+        const startBtn = document.getElementById('start-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const elementDetails = document.getElementById('element-details');
+
+        // Инициализация сетки элементов
+        function initElementGrid() {
+            elementGrid.innerHTML = '';
+            elements.forEach(element => {
+                const elementEl = document.createElement('div');
+                elementEl.className = 'element';
+                elementEl.textContent = element.symbol;
+                elementEl.dataset.number = element.number;
+                elementEl.addEventListener('click', handleElementClick);
+                elementGrid.appendChild(elementEl);
+            });
+        }
+
+        // Начало игры
+        function startGame() {
+            score = 0;
+            remainingElements = elements.length;
+            time = 0;
+            usedElements = [];
+            hintCount = 0;
+            
+            scoreEl.textContent = score;
+            remainingEl.textContent = remainingElements;
+            updateTime();
+            
+            startBtn.disabled = true;
+            hintBtn.disabled = false;
+            resetBtn.disabled = false;
+            
+            timer = setInterval(() => {
+                time++;
+                updateTime();
+            }, 1000);
+            
+            nextTarget();
+            initElementGrid();
+        }
+
+        // Обновление времени
+        function updateTime() {
+            const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+            const seconds = (time % 60).toString().padStart(2, '0');
+            timeEl.textContent = `${minutes}:${seconds}`;
+        }
+
+        // Выбор следующей цели
+        function nextTarget() {
+            const availableElements = elements.filter(el => !usedElements.includes(el.number));
+            
+            if (availableElements.length === 0) {
+                endGame();
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * availableElements.length);
+            currentTarget = availableElements[randomIndex];
+            
+            // Случайный выбор типа подсказки
+            const hintType = Math.floor(Math.random() * 3);
+            let hintText = '';
+            
+            switch(hintType) {
+                case 0:
+                    hintText = `Атомный номер: ${currentTarget.number}`;
+                    break;
+                case 1:
+                    hintText = `Категория: ${currentTarget.category}`;
+                    break;
+                case 2:
+                    hintText = `Атомная масса: ${currentTarget.mass}`;
+                    break;
+            }
+            
+            currentTargetEl.textContent = `Найдите: ${currentTarget.name}`;
+            hintEl.textContent = `Подсказка: ${hintText}`;
+        }
+
+        // Обработка клика по элементу
+        function handleElementClick(e) {
+            if (!currentTarget) return;
+            
+            const elementNumber = parseInt(e.target.dataset.number);
+            const element = elements.find(el => el.number === elementNumber);
+            
+            if (elementNumber === currentTarget.number) {
+                // Правильный ответ
+                e.target.classList.add('found');
+                score += 10 - hintCount; // Бонус за меньшее количество подсказок
+                hintCount = 0;
+                remainingElements--;
+                usedElements.push(elementNumber);
+                
+                scoreEl.textContent = score;
+                remainingEl.textContent = remainingElements;
+                
+                // Показать детали элемента
+                showElementDetails(element);
+                
+                // Следующая цель
+                setTimeout(nextTarget, 1500);
+            } else {
+                // Неправильный ответ
+                e.target.classList.add('wrong');
+                setTimeout(() => {
+                    e.target.classList.remove('wrong');
+                }, 1000);
+                
+                if (score > 0) {
+                    score--;
+                    scoreEl.textContent = score;
+                }
+            }
+        }
+
+        // Показать детали элемента
+        function showElementDetails(element) {
+            document.getElementById('detail-name').textContent = element.name;
+            document.getElementById('detail-symbol').textContent = element.symbol;
+            document.getElementById('detail-number').textContent = element.number;
+            document.getElementById('detail-mass').textContent = element.mass;
+            document.getElementById('detail-category').textContent = element.category;
+            document.getElementById('detail-description').textContent = element.description;
+            
+            elementDetails.style.display = 'block';
+            
+            // Скрыть через 5 секунд
+            setTimeout(() => {
+                elementDetails.style.display = 'none';
+            }, 5000);
+        }
+
+        // Получить дополнительную подсказку
+        function getHint() {
+            if (!currentTarget || hintCount >= 3) return;
+            
+            hintCount++;
+            
+            // Уменьшение очков за подсказку
+            if (score > 0) {
+                score--;
+                scoreEl.textContent = score;
+            }
+            
+            // Дополнительная информация
+            let extraHint = '';
+            if (hintCount === 1) {
+                extraHint = ` Символ: ${currentTarget.symbol}`;
+            } else if (hintCount === 2) {
+                extraHint = ` Первая буква: ${currentTarget.name[0]}`;
+            } else {
+                extraHint = ` Это ${currentTarget.category.toLowerCase()}`;
+            }
+            
+            hintEl.textContent += extraHint;
+        }
+
+        // Конец игры
+        function endGame() {
+            clearInterval(timer);
+            currentTarget = null;
+            currentTargetEl.textContent = 'Игра завершена!';
+            hintEl.textContent = `Ваш результат: ${score} очков за ${formatTime(time)}`;
+            
+            startBtn.disabled = false;
+            hintBtn.disabled = true;
+        }
+
+        // Форматирование времени
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins} мин ${secs} сек`;
+        }
+
+        // Сброс игры
+        function resetGame() {
+            clearInterval(timer);
+            startBtn.disabled = false;
+            hintBtn.disabled = true;
+            resetBtn.disabled = true;
+            
+            currentTarget = null;
+            currentTargetEl.textContent = 'Нажмите "Начать игру", чтобы начать!';
+            hintEl.textContent = 'Подсказка появится здесь...';
+            
+            // Сброс стилей элементов
+            document.querySelectorAll('.element').forEach(el => {
+                el.classList.remove('found', 'wrong');
+            });
+        }
+
+        // События
+        startBtn.addEventListener('click', startGame);
+        hintBtn.addEventListener('click', getHint);
+        resetBtn.addEventListener('click', resetGame);
+
+        // Инициализация
+        initElementGrid();
+    </script>
+</body>
+</html>
